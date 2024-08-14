@@ -1,0 +1,7 @@
+# Ignorar todo
+*
+
+# Excepciones
+!.gitignore
+!ENTREGA_1/
+!ENTREGA_1/**
