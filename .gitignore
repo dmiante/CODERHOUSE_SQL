@@ -5,4 +5,6 @@
 !.gitignore
 !ENTREGA_1/
 !ENTREGA_1/**
+!ENTREGA_2/
+!ENTREGA_2/**
 !README.md
