@@ -1,0 +1,1 @@
+Yo les recomendaría como mínimo para esta segunda pre-entrega 2 vistas, 2 funciones, 2 procedimientos almacenados y 2 triggers
