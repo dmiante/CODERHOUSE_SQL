@@ -4,7 +4,7 @@ USE CINE_INDEPENDIENTE;
 
 CREATE TABLE CLIENTE (
   id_cliente BIGINT NOT NULL AUTO_INCREMENT,
-  dni INT(11) NOT NULL,
+  dni INT NOT NULL,
   nombre VARCHAR(45) NOT NULL,
   apellido VARCHAR(45) NOT NULL,
   email VARCHAR(45) DEFAULT NULL UNIQUE,
@@ -12,13 +12,13 @@ CREATE TABLE CLIENTE (
 );
 
 CREATE TABLE CALIFICACION(
-  id_calificacion BIGINT NOT NULL AUTO_INCREMENT,
+  id_calificacion INT NOT NULL,
   nombre CHAR(5) NOT NULL, 
   PRIMARY KEY(id_calificacion)
 );
 
 CREATE TABLE PAIS(
-  id_pais BIGINT NOT NULL AUTO_INCREMENT,
+  id_pais INT NOT NULL AUTO_INCREMENT,
   nombre VARCHAR(45) NOT NULL,
   PRIMARY KEY(id_pais)
 );
@@ -29,8 +29,8 @@ CREATE TABLE PELICULA(
   anio_estreno INT NOT NULL,
   duracion INT NOT NULL,
   genero VARCHAR(100) DEFAULT NULL,
-  fk_calificacion BIGINT NOT NULL,
-  fk_pais BIGINT NOT NULL, 
+  fk_calificacion INT NOT NULL,
+  fk_pais INT NOT NULL, 
   sinopsis TEXT DEFAULT NULL,
   PRIMARY KEY(id_pelicula),
   FOREIGN KEY(fk_calificacion) REFERENCES CALIFICACION(id_calificacion),
@@ -64,8 +64,8 @@ CREATE TABLE CARTELERA(
 
 CREATE TABLE FUNCION(
   id_funcion BIGINT NOT NULL AUTO_INCREMENT,
-  hora TIME NOT NULL,
   fecha DATE NOT NULL,
+  hora TIME NOT NULL,
   fk_id_pelicula BIGINT NOT NULL,
   fk_id_sala INT NOT NULL,
   PRIMARY KEY(id_funcion),
@@ -75,12 +75,11 @@ CREATE TABLE FUNCION(
 
 CREATE TABLE BOLETO(
   id_boleto BIGINT NOT NULL AUTO_INCREMENT,
-  cantidad INT NOT NULL,
-  precio NUMERIC(10, 2) NOT NULL,
+  precio DECIMAL(10, 0) NOT NULL,
   fecha DATE NOT NULL,
   hora TIME NOT NULL,
   tipo_de_pago VARCHAR(45) NOT NULL,
-  asiento INT NOT NULL,
+  asiento VARCHAR(50) NOT NULL,
   fk_id_cliente BIGINT DEFAULT NULL,
   fk_id_funcion BIGINT NOT NULL,
   PRIMARY KEY(id_boleto),
@@ -97,5 +96,8 @@ CREATE TABLE CARTELERA_FUNCION(
   FOREIGN KEY(fk_id_funcion) REFERENCES FUNCION(id_funcion) 
 );
 
+-- Agregar indice UNIQUE a los atributos asiento y id_funcion, para que ninguna funcion tenga el mismo asiento
+ALTER TABLE BOLETO
+ADD CONSTRAINT unique_asiento_funcion UNIQUE (asiento, fk_id_funcion);
 
 
