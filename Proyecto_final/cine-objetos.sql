@@ -1,6 +1,6 @@
 USE cine_independiente;
 
-# VISTAS
+# 5 VISTAS
 
 -- Muestra el total de boletos vendidos y el monto recaudado por cada cine.
 CREATE OR REPLACE VIEW ventas_por_cine AS
@@ -34,7 +34,18 @@ JOIN FUNCION F ON B.fk_id_funcion = F.id_funcion
 JOIN PELICULA P ON F.fk_id_pelicula = P.id_pelicula
 GROUP BY P.titulo;
 
-# FUNCIONES
+
+
+
+
+
+
+
+
+
+
+
+# 2 FUNCIONES
 
 -- Devuelve el total recaudado por una función específica.
 DELIMITER //
@@ -43,7 +54,7 @@ RETURNS DECIMAL(10, 2)
 DETERMINISTIC
 BEGIN
   DECLARE total DECIMAL(10, 2);
-  SELECT SUM(precio) INTO total 
+  SELECT SUM(precio) INTO total
   FROM BOLETO WHERE fk_id_funcion = id_funcion;
   RETURN IFNULL(total, 0); -- Si no es nulo retorna total, de lo contrario retorna 0
 END //
@@ -67,39 +78,81 @@ END //
 DELIMITER ;
 
 
-# PROCEDIMIENTOS ALMACENADOS
+
+
+
+
+
+
+# 2 PROCEDIMIENTOS ALMACENADOS
 
 -- Agrega una pelicula nueva a la tabla pelicula
 DELIMITER //
 CREATE PROCEDURE agregar_pelicula(
-  IN titulo VARCHAR(45), 
-  IN anio INT, 
-  IN duracion INT, 
-  IN genero VARCHAR(100), 
-  IN calificacion INT, 
-  IN pais INT,
-  IN sinopsis TEXT
+  IN Titulo VARCHAR(45), 
+  IN Anio_de_estreno INT, 
+  IN Duracion INT, 
+  IN Genero VARCHAR(100), 
+  IN Calificacion INT, 
+  IN Pais INT,
+  IN Sinopsis TEXT
 )
 BEGIN
   INSERT INTO PELICULA (titulo, anio_estreno, duracion, genero, fk_calificacion, fk_pais, sinopsis)
-  VALUES (titulo, anio, duracion, genero, calificacion, pais, sinopsis);
+  VALUES (Titulo, Anio_de_estreno, Duracion, Genero, Calificacion, Pais, Sinopsis);
 END //
 DELIMITER ;
 
--- Actualiza el precio de una funcion
+-- Actualiza el precio de un boleto
 DELIMITER //
-CREATE PROCEDURE actualizar_precio_boletos(
-    IN id_funcion BIGINT,
+CREATE PROCEDURE actualizar_precio_boleto(
+    IN numero_boleto BIGINT,
     IN nuevo_precio DECIMAL(10, 0)
 )
 BEGIN
     UPDATE BOLETO
     SET precio = nuevo_precio
-    WHERE fk_id_funcion = id_funcion;
+    WHERE id_boleto = numero_boleto;
+    SELECT * FROM BOLETO WHERE id_boleto = numero_boleto;
 END //
 DELIMITER ;
 
-# TRIGGERS
+
+-- Ver disponibilidad de asientos
+DELIMITER $$
+CREATE PROCEDURE disponibilidad_asientos(
+  IN p_id_funcion BIGINT
+)
+BEGIN
+  SELECT a.id_asiento, a.nombre 
+  FROM ASIENTO a
+  LEFT JOIN BOLETO b ON a.id_asiento = b.fk_id_asiento AND b.fk_id_funcion = p_id_funcion
+  WHERE b.id_boleto IS NULL;
+END $$
+DELIMITER ;
+
+-- Ver asientos ocupados
+DELIMITER $$
+CREATE PROCEDURE asientos_ocupados(
+  IN p_id_funcion BIGINT
+)
+BEGIN
+  SELECT a.id_asiento, a.nombre 
+  FROM ASIENTO a
+  LEFT JOIN BOLETO b ON a.id_asiento = b.fk_id_asiento AND b.fk_id_funcion = p_id_funcion
+  WHERE b.id_boleto IS NOT NULL;
+END $$
+DELIMITER ;
+
+
+
+
+
+
+
+
+
+# 2 TRIGGERS
 
 -- Previene la inserción de películas con duración menor a 30 minutos.
 DELIMITER //
@@ -114,18 +167,32 @@ BEGIN
 END //
 DELIMITER ;
 
--- Evitar boletos duplicados
+-- Evitar ingresar fechas pasadas en una funcion
 DELIMITER //
-CREATE TRIGGER evitar_boletos_duplicados
-BEFORE INSERT ON BOLETO
+CREATE TRIGGER verificar_fecha_funcion
+BEFORE INSERT ON FUNCION
 FOR EACH ROW
 BEGIN
-    IF EXISTS (SELECT 1 FROM BOLETO WHERE fk_id_cliente = NEW.fk_id_cliente AND fk_id_funcion = NEW.fk_id_funcion) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'El cliente ya ha comprado un boleto para esta función.';
-    END IF;
+  IF NEW.fecha < CURDATE() THEN
+    SIGNAL SQLSTATE '45000' 
+    SET MESSAGE_TEXT = 'No se puede programar una función en una fecha pasada.';
+  END IF;
 END //
 DELIMITER ;
+
+-- actualizar el total de la venta al agregar un boleto
+DELIMITER //
+CREATE TRIGGER actualizar_total_venta
+AFTER INSERT ON BOLETO
+FOR EACH ROW
+BEGIN
+  UPDATE VENTA
+  SET total_venta = total_venta + NEW.precio
+  WHERE id_venta = NEW.fk_id_venta;
+END //
+DELIMITER ;
+
+
 
 
 
