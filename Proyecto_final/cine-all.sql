@@ -1,3 +1,435 @@
+-- DROP DATABASE CINE_INDEPENDIENTE;
+CREATE DATABASE IF NOT EXISTS CINE_INDEPENDIENTE;
+
+USE CINE_INDEPENDIENTE;
+
+CREATE TABLE CLIENTE (
+  id_cliente BIGINT NOT NULL AUTO_INCREMENT,
+  dni VARCHAR(10) NOT NULL UNIQUE,
+  nombre VARCHAR(45) NOT NULL,
+  apellido VARCHAR(45) NOT NULL,
+  email VARCHAR(45) DEFAULT NULL UNIQUE,
+  PRIMARY KEY(id_cliente)
+);
+
+CREATE TABLE CALIFICACION(
+  id_calificacion INT NOT NULL,
+  nombre CHAR(5) NOT NULL, 
+  PRIMARY KEY(id_calificacion)
+);
+
+CREATE TABLE PAIS(
+  id_pais INT NOT NULL AUTO_INCREMENT,
+  nombre VARCHAR(45) NOT NULL,
+  PRIMARY KEY(id_pais)
+);
+
+CREATE TABLE CINE(
+  id_cine BIGINT NOT NULL AUTO_INCREMENT,
+  nombre VARCHAR(45) NOT NULL,
+  direccion VARCHAR(100) NOT NULL,
+  ciudad VARCHAR(45) NOT NULL,
+  PRIMARY KEY(id_cine)
+);
+
+CREATE TABLE METODO_PAGO (
+  id_metodo_pago BIGINT NOT NULL AUTO_INCREMENT,
+  nombre VARCHAR(45) NOT NULL,
+  PRIMARY KEY(id_metodo_pago)
+);
+
+CREATE TABLE EMPLEADO(
+  id_empleado BIGINT NOT NULL AUTO_INCREMENT,
+  nombre VARCHAR(45) NOT NULL,
+  apellido VARCHAR(45) NOT NULL,
+  dni VARCHAR(10) NOT NULL UNIQUE,
+  email VARCHAR(45) DEFAULT NULL UNIQUE,
+  cargo VARCHAR(45) NOT NULL,
+  fecha_contratacion DATE NOT NULL,
+  sueldo DECIMAL(10, 0) NOT NULL,
+  fk_cine BIGINT NOT NULL,
+  PRIMARY KEY(id_empleado),
+  FOREIGN KEY(fk_cine) REFERENCES CINE(id_cine)
+);
+
+CREATE TABLE SALA(
+  id_sala INT NOT NULL AUTO_INCREMENT,
+  capacidad INT NOT NULL,
+  fk_cine BIGINT NOT NULL,
+  PRIMARY KEY(id_sala),
+  FOREIGN KEY(fk_cine) REFERENCES CINE(id_cine)
+);
+
+CREATE TABLE ASIENTO(
+  id_asiento BIGINT NOT NULL AUTO_INCREMENT,
+  nombre CHAR(5) NOT NULL,
+  fk_sala INT NOT NULL,
+  PRIMARY KEY(id_asiento),
+  FOREIGN KEY(fk_sala) REFERENCES SALA(id_sala)
+);
+
+CREATE TABLE CARTELERA(
+  id_cartelera BIGINT NOT NULL AUTO_INCREMENT,
+  fecha_inicio DATE NOT NULL,
+  fecha_fin DATE NOT NULL,
+  fk_cine BIGINT NOT NULL,
+  PRIMARY KEY(id_cartelera),
+  FOREIGN KEY(fk_cine) REFERENCES CINE(id_cine)
+);
+
+CREATE TABLE PELICULA(
+  id_pelicula BIGINT NOT NULL AUTO_INCREMENT,
+  titulo VARCHAR(45) NOT NULL,
+  anio_estreno YEAR NOT NULL,
+  duracion INT NOT NULL,
+  genero VARCHAR(100) DEFAULT NULL,
+  fk_calificacion INT NOT NULL,
+  fk_pais INT NOT NULL, 
+  sinopsis TEXT DEFAULT NULL,
+  PRIMARY KEY(id_pelicula),
+  FOREIGN KEY(fk_calificacion) REFERENCES CALIFICACION(id_calificacion),
+  FOREIGN KEY(fk_pais) REFERENCES PAIS(id_pais)
+);
+
+CREATE TABLE CARTELERA_PELICULA(
+  id_cartelera_pelicula BIGINT NOT NULL AUTO_INCREMENT,
+  fk_cartelera BIGINT NOT NULL,
+  fk_pelicula BIGINT NOT NULL,
+  PRIMARY KEY(id_cartelera_pelicula),
+  FOREIGN KEY(fk_cartelera) REFERENCES CARTELERA(id_cartelera),
+  FOREIGN KEY(fk_pelicula) REFERENCES PELICULA(id_pelicula) 
+);
+
+CREATE TABLE FUNCION(
+  id_funcion BIGINT NOT NULL AUTO_INCREMENT,
+  fecha DATE NOT NULL,
+  hora TIME NOT NULL,
+  fk_pelicula BIGINT NOT NULL,
+  fk_sala INT NOT NULL,
+  PRIMARY KEY(id_funcion),
+  FOREIGN KEY(fk_pelicula) REFERENCES PELICULA(id_pelicula),
+  FOREIGN KEY(fk_sala) REFERENCES SALA(id_sala)
+);
+
+CREATE TABLE CARTELERA_FUNCION(
+  id_cartelera_pelicula BIGINT NOT NULL AUTO_INCREMENT,
+  fk_cartelera BIGINT NOT NULL,
+  fk_funcion BIGINT NOT NULL,
+  PRIMARY KEY(id_cartelera_pelicula),
+  FOREIGN KEY(fk_cartelera) REFERENCES CARTELERA(id_cartelera),
+  FOREIGN KEY(fk_funcion) REFERENCES FUNCION(id_funcion) 
+);
+
+CREATE TABLE VENTA(
+  id_venta BIGINT NOT NULL AUTO_INCREMENT,
+  fecha_venta DATE NOT NULL,
+  hora_venta TIME NOT NULL,
+  total_venta DECIMAL(10, 0) NOT NULL,
+  fk_metodo_pago BIGINT NOT NULL,
+  fk_cliente BIGINT NOT NULL,
+  PRIMARY KEY(id_venta),
+  FOREIGN KEY(fk_metodo_pago) REFERENCES METODO_PAGO(id_metodo_pago),
+  FOREIGN KEY(fk_cliente) REFERENCES CLIENTE(id_cliente)
+);
+
+CREATE TABLE BOLETO(
+  id_boleto BIGINT NOT NULL AUTO_INCREMENT,
+  precio DECIMAL(10, 0) NOT NULL,
+  fk_venta BIGINT NOT NULL,
+  fk_funcion BIGINT NOT NULL,
+  fk_asiento BIGINT NOT NULL,
+  PRIMARY KEY(id_boleto),
+  FOREIGN KEY(fk_venta) REFERENCES VENTA(id_venta),
+  FOREIGN KEY(fk_funcion) REFERENCES FUNCION(id_funcion),
+  FOREIGN KEY(fk_asiento) REFERENCES ASIENTO(id_asiento)
+);
+
+-- Agregar indice UNIQUE a los atributos asiento y id_funcion, para que ninguna funcion tenga el mismo asiento
+ALTER TABLE BOLETO
+ADD CONSTRAINT unique_asiento UNIQUE (fk_asiento, fk_funcion);
+
+
+
+
+# 5 VISTAS
+
+    
+-- Muestra el total de boletos vendidos y el monto recaudado por cada película.
+CREATE OR REPLACE VIEW ventas_por_pelicula AS
+SELECT 
+	P.titulo AS pelicula,
+	COUNT(B.id_boleto) AS boletos_vendidos,
+    SUM(B.precio) AS total_recaudado
+FROM BOLETO B
+JOIN FUNCION F ON B.fk_funcion = F.id_funcion
+JOIN PELICULA P ON F.fk_pelicula = P.id_pelicula
+GROUP BY P.titulo;
+
+-- Muestra los boletos vendidos de cada funcion
+CREATE OR REPLACE VIEW boletos_por_funcion AS
+SELECT 
+    f.id_funcion AS funcion_id,
+    p.titulo AS pelicula_titulo,
+    f.fecha AS funcion_fecha,
+    f.hora AS funcion_hora,
+    COUNT(b.id_boleto) AS boletos_vendidos
+FROM BOLETO b
+JOIN FUNCION f ON b.fk_funcion = f.id_funcion
+JOIN PELICULA p ON f.fk_pelicula = p.id_pelicula
+GROUP BY f.id_funcion, p.titulo, f.fecha, f.hora;
+
+
+-- Muestras las peliculas que se proyectan en el dia.
+CREATE VIEW peliculas_del_dia AS
+SELECT 
+    p.titulo AS pelicula_titulo,
+    p.anio_estreno AS anio_estreno,
+    p.duracion AS duracion_minutos,
+    p.genero AS genero,
+    c.nombre AS cine_nombre,
+    ca.fecha_inicio AS cartelera_inicio,
+    ca.fecha_fin AS cartelera_fin
+FROM PELICULA p
+JOIN CARTELERA_PELICULA cp ON p.id_pelicula = cp.fk_pelicula
+JOIN CARTELERA ca ON cp.fk_cartelera = ca.id_cartelera
+JOIN CINE c ON ca.fk_cine = c.id_cine
+WHERE CURDATE() BETWEEN ca.fecha_inicio AND ca.fecha_fin;
+    
+-- Muestra las funciones disponibles de una cartelera semanal.
+CREATE VIEW funciones_disponibles AS
+SELECT 
+    c.nombre AS cine_nombre,
+    p.titulo AS pelicula_titulo,
+    f.fecha AS funcion_fecha,
+    f.hora AS funcion_hora,
+    s.id_sala AS sala_id,
+    s.capacidad AS sala_capacidad
+FROM FUNCION f
+JOIN SALA s ON f.fk_sala = s.id_sala
+JOIN CINE c ON s.fk_cine = c.id_cine
+JOIN PELICULA p ON f.fk_pelicula = p.id_pelicula
+JOIN CARTELERA_FUNCION cf ON cf.fk_funcion = f.id_funcion
+JOIN CARTELERA ca ON cf.fk_cartelera = ca.id_cartelera
+WHERE f.fecha >= CURDATE()
+AND ca.fecha_fin >= CURDATE(); 
+
+-- Muestra las ventas mensuales del cine
+CREATE OR REPLACE VIEW ventas_mensuales AS
+SELECT 
+    YEAR(v.fecha_venta) AS anio,
+    MONTH(v.fecha_venta) AS mes,
+    COUNT(v.id_venta) AS total_ventas,
+    SUM(v.total_venta) AS total_recaudado
+FROM VENTA v
+GROUP BY YEAR(v.fecha_venta), MONTH(v.fecha_venta)
+ORDER BY anio DESC, mes DESC;
+
+
+# 5 PROCEDIMIENTOS ALMACENADOS
+
+-- Agrega una pelicula nueva a la tabla pelicula
+DELIMITER //
+CREATE PROCEDURE agregar_pelicula(
+  IN Titulo VARCHAR(45), 
+  IN Anio_de_estreno INT, 
+  IN Duracion INT, 
+  IN Genero VARCHAR(100), 
+  IN Calificacion INT, 
+  IN Pais INT,
+  IN Sinopsis TEXT
+)
+BEGIN
+  INSERT INTO PELICULA (titulo, anio_estreno, duracion, genero, fk_calificacion, fk_pais, sinopsis)
+  VALUES (Titulo, Anio_de_estreno, Duracion, Genero, Calificacion, Pais, Sinopsis);
+END //
+DELIMITER ;
+
+-- Actualiza el precio de un boleto
+DELIMITER //
+CREATE PROCEDURE actualizar_precio_boleto(
+    IN numero_boleto BIGINT,
+    IN nuevo_precio DECIMAL(10, 0)
+)
+BEGIN
+    UPDATE BOLETO
+    SET precio = nuevo_precio
+    WHERE id_boleto = numero_boleto;
+    SELECT * FROM BOLETO WHERE id_boleto = numero_boleto;
+END //
+DELIMITER ;
+
+
+-- Ver disponibilidad de asientos de una funcion
+DELIMITER //
+CREATE PROCEDURE disponibilidad_asientos(
+  IN p_id_funcion BIGINT
+)
+BEGIN
+	SELECT 
+		a.id_asiento, 
+		a.nombre AS Asientos_disponibles,
+		f.fecha AS Fecha_funcion,
+		f.hora AS Hora_funcion
+	FROM ASIENTO a
+	LEFT JOIN BOLETO b ON a.id_asiento = b.fk_asiento AND b.fk_funcion = p_id_funcion
+	JOIN FUNCION f ON f.id_funcion = p_id_funcion
+	WHERE b.id_boleto IS NULL;
+END //
+DELIMITER ;
+
+-- Ver asientos ocupados
+DELIMITER //
+CREATE PROCEDURE asientos_ocupados(
+  IN p_id_funcion BIGINT
+)
+BEGIN
+  SELECT 
+	f.fecha as fecha_funcion,
+    f.hora as Hora_funcion,
+    a.id_asiento, 
+    a.nombre as Asiento_ocupado,
+    c.nombre as Nombre_cliente,
+    c.apellido as Apellido_cliente
+  FROM ASIENTO a
+  JOIN BOLETO b ON a.id_asiento = b.fk_asiento AND b.fk_funcion = p_id_funcion
+  JOIN FUNCION F ON b.fk_funcion = f.id_funcion
+  JOIN VENTA v ON b.fk_venta = v.id_venta
+  JOIN CLIENTE c ON v.fk_cliente = c.id_cliente
+  WHERE b.id_boleto IS NOT NULL;
+END //
+DELIMITER ;
+
+
+-- Inserta boletos de acuerdo al total de la venta
+DELIMITER //
+CREATE PROCEDURE vender_boletos(
+    IN p_cliente_id BIGINT,
+    IN p_metodo_pago_id BIGINT,
+    IN p_funcion_id BIGINT,
+    IN p_asiento_inicial BIGINT,
+    IN p_total_venta DECIMAL(10, 0),
+    OUT p_venta_id BIGINT
+)
+BEGIN
+    DECLARE boletos_a_generar INT;
+    DECLARE asiento_actual BIGINT;
+    DECLARE asiento_disponible BOOLEAN;
+    DECLARE i INT DEFAULT 0;
+    DECLARE precio_boletos DECIMAL(10, 0) DEFAULT 4000; 
+
+	SET boletos_a_generar = p_total_venta / precio_boletos;
+    SET asiento_actual = p_asiento_inicial;
+
+    START TRANSACTION;
+    INSERT INTO VENTA(fecha_venta, hora_venta, total_venta, fk_metodo_pago, fk_cliente)
+    VALUES (CURDATE(), CURTIME(), p_total_venta, p_metodo_pago_id, p_cliente_id);
+    
+    SET p_venta_id = LAST_INSERT_ID();
+
+    -- Bucle para generar boletos en función de la cantidad calculada
+    WHILE i < boletos_a_generar DO
+        SELECT COUNT(*) INTO asiento_disponible
+        FROM BOLETO
+        WHERE fk_asiento = asiento_actual AND fk_funcion = p_funcion_id;
+        
+        IF asiento_disponible > 0 THEN
+            ROLLBACK;
+            SIGNAL SQLSTATE '45000' 
+            SET MESSAGE_TEXT = 'Un asiento ya está ocupado para esta función';
+        ELSE
+            INSERT INTO BOLETO(precio, fk_venta, fk_funcion, fk_asiento)
+            VALUES (precio_boletos, p_venta_id, p_funcion_id, asiento_actual);
+            SET asiento_actual = asiento_actual + 1;
+        END IF;
+        SET i = i + 1;
+    END WHILE;
+    COMMIT;
+END //
+DELIMITER ;
+
+
+
+# 2 FUNCIONES
+
+-- Devuelve el total recaudado por una función específica.
+DELIMITER //
+CREATE FUNCTION calcular_recaudacion_funcion(id_funcion BIGINT)
+RETURNS DECIMAL(10, 2)
+DETERMINISTIC
+BEGIN
+  DECLARE total DECIMAL(10, 2);
+  SELECT SUM(precio) INTO total
+  FROM BOLETO WHERE fk_funcion = id_funcion;
+  RETURN IFNULL(total, 0); -- Si no es nulo retorna total, de lo contrario retorna 0
+END //
+DELIMITER ;
+
+
+-- Cuenta cuántos boletos se han vendido para una función específica.
+DELIMITER //
+CREATE FUNCTION contar_boletos_por_funcion(id_funcion BIGINT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+  DECLARE total_boletos INT;
+  
+  SELECT COUNT(*) INTO total_boletos
+  FROM BOLETO
+  WHERE fk_funcion = id_funcion;
+
+  RETURN total_boletos;
+END //
+DELIMITER ;
+
+
+
+
+# 3 TRIGGERS
+
+-- Previene la inserción de películas con duración menor a 30 minutos.
+DELIMITER //
+CREATE TRIGGER validar_duracion_pelicula
+BEFORE INSERT ON PELICULA
+FOR EACH ROW
+BEGIN
+  IF NEW.duracion < 50 THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'La duración de la película no puede ser menor a 50 minutos.';
+  END IF;
+END //
+DELIMITER ;
+
+-- Evitar ingresar fechas pasadas en una funcion
+DELIMITER //
+CREATE TRIGGER verificar_fecha_funcion
+BEFORE INSERT ON FUNCION
+FOR EACH ROW
+BEGIN
+  IF NEW.fecha < CURDATE() THEN
+    SIGNAL SQLSTATE '45000' 
+    SET MESSAGE_TEXT = 'No se puede programar una función en una fecha pasada.';
+  END IF;
+END //
+DELIMITER ;
+
+
+-- Actualizar la tabla venta al agregar un boleto, incluyendo el total_venta
+DELIMITER //
+CREATE TRIGGER actualizar_total_venta
+AFTER INSERT ON BOLETO
+FOR EACH ROW
+BEGIN
+  UPDATE VENTA
+  SET total_venta = total_venta + NEW.precio,
+  fecha_venta = curdate(),
+  hora_venta = curtime()
+  WHERE id_venta = NEW.fk_venta;
+END //
+DELIMITER ;
+
+
+
+
 -- INSERT CLIENTES
 INSERT INTO CLIENTE (dni, nombre, apellido, email) VALUES ('12345678-5', 'Juan', 'Pérez', 'juan.perez@gmail.com');
 INSERT INTO CLIENTE (dni, nombre, apellido, email) VALUES ('18765432-1', 'María', 'González', 'maria.gonzalez@yahoo.com');
