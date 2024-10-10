@@ -30,6 +30,7 @@ INSERT INTO PAIS (id_pais, nombre) VALUES (12,'Suecia');
 INSERT INTO PAIS (id_pais, nombre) VALUES (13,'Dinamarca');
 INSERT INTO PAIS (id_pais, nombre) VALUES (14,'Noruega');
 INSERT INTO PAIS (id_pais, nombre) VALUES (15,'Líbano');
+INSERT INTO PAIS (id_pais, nombre) VALUES (16,'Estados Unidos');
 
 -- INSERT CINE
 INSERT INTO CINE (id_cine, nombre, direccion, ciudad) VALUES (1, 'Cine El biografo', 'Jose Victorino Lastarria 181', 'Santiago');
