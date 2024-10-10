@@ -87,7 +87,7 @@ ORDER BY anio DESC, mes DESC;
 
 
 
-# 5 PROCEDIMIENTOS ALMACENADOS
+# 3 PROCEDIMIENTOS ALMACENADOS
 
 -- Agrega una pelicula nueva a la tabla pelicula
 DELIMITER //
@@ -117,47 +117,6 @@ BEGIN
     SET precio = nuevo_precio
     WHERE id_boleto = numero_boleto;
     SELECT * FROM BOLETO WHERE id_boleto = numero_boleto;
-END //
-DELIMITER ;
-
-
--- Ver disponibilidad de asientos de una funcion
-DELIMITER //
-CREATE PROCEDURE disponibilidad_asientos(
-  IN p_id_funcion BIGINT
-)
-BEGIN
-	SELECT 
-		a.id_asiento, 
-		a.nombre AS Asientos_disponibles,
-		f.fecha AS Fecha_funcion,
-		f.hora AS Hora_funcion
-	FROM ASIENTO a
-	LEFT JOIN BOLETO b ON a.id_asiento = b.fk_asiento AND b.fk_funcion = p_id_funcion
-	JOIN FUNCION f ON f.id_funcion = p_id_funcion
-	WHERE b.id_boleto IS NULL;
-END //
-DELIMITER ;
-
--- Ver asientos ocupados
-DELIMITER //
-CREATE PROCEDURE asientos_ocupados(
-  IN p_id_funcion BIGINT
-)
-BEGIN
-  SELECT 
-	f.fecha as fecha_funcion,
-    f.hora as Hora_funcion,
-    a.id_asiento, 
-    a.nombre as Asiento_ocupado,
-    c.nombre as Nombre_cliente,
-    c.apellido as Apellido_cliente
-  FROM ASIENTO a
-  JOIN BOLETO b ON a.id_asiento = b.fk_asiento AND b.fk_funcion = p_id_funcion
-  JOIN FUNCION F ON b.fk_funcion = f.id_funcion
-  JOIN VENTA v ON b.fk_venta = v.id_venta
-  JOIN CLIENTE c ON v.fk_cliente = c.id_cliente
-  WHERE b.id_boleto IS NOT NULL;
 END //
 DELIMITER ;
 
